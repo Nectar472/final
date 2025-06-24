@@ -1,4 +1,3 @@
-
 import requests
 import asyncio
 import random
@@ -13,7 +12,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Encar Direct Proxy", version="1.0")
+app = FastAPI(title="Encar Direct Proxy", version="1.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -166,7 +165,7 @@ async def health():
 async def root():
     return {
         "service": "Encar Direct Proxy",
-        "version": "1.0",
+        "version": "1.1",
         "endpoints": ["/api/catalog", "/health"]
     }
 
