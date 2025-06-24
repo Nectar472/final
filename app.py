@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 import json
+import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,18 +55,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.78 Mobile Safari/537.36",
 ]
 
-BASE_HEADERS = {
-    "accept": "*/*",
-    "accept-language": "en,ru;q=0.9",
-    "origin": "https://www.encar.com",
-    "referer": "https://www.encar.com/",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "cross-site",
-}
-
 class EncarProxyClient:
     def __init__(self):
         self.session = requests.Session()
@@ -79,9 +68,36 @@ class EncarProxyClient:
 
     def _get_dynamic_headers(self) -> Dict[str, str]:
         ua = random.choice(USER_AGENTS)
-        headers = BASE_HEADERS.copy()
-        headers["user-agent"] = ua
-        headers["sec-ch-ua"] = '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"'
+        headers = {
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+            "origin": "http://www.encar.com",
+            "referer": "http://www.encar.com/",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "user-agent": ua,
+        }
+        match = re.search(r"Chrome/(\d+)", ua)
+        chrome_version = match.group(1) if match else "125"
+        headers["sec-ch-ua"] = (
+            f'"Google Chrome";v="{chrome_version}", "Chromium";v="{chrome_version}", "Not/A)Brand";v="24"'
+        )
+        if "Windows" in ua:
+            headers["sec-ch-ua-platform"] = '"Windows"'
+        elif "Macintosh" in ua:
+            headers["sec-ch-ua-platform"] = '"macOS"'
+        elif "Android" in ua:
+            headers["sec-ch-ua-platform"] = '"Android"'
+            headers["sec-ch-ua-mobile"] = "?1"
+        elif "iPhone" in ua:
+            headers["sec-ch-ua-platform"] = '"iOS"'
+            headers["sec-ch-ua-mobile"] = "?1"
+        else:
+            headers["sec-ch-ua-platform"] = '"Unknown"'
         return headers
 
     def _rotate_proxy(self):
