@@ -33,7 +33,7 @@ PROXY_CONFIGS = [
     {
         "name": "Oxylabs Korea Residential",
         "proxy": "pr.oxylabs.io:7777",
-        "auth": "customer-adapt_Yf2Vn-cc-US:2NUmsvXdgsc+tm5",
+        "auth": "customer-adapt_Yf2Vn-cc-kr:2NUmsvXdgsc+tm5",
         "location": "South Korea",
         "provider": "oxylabs",
     },
@@ -57,8 +57,8 @@ USER_AGENTS = [
 BASE_HEADERS = {
     "accept": "*/*",
     "accept-language": "en,ru;q=0.9",
-    "origin": "https://cars.prokorea.trading",
-    "referer": "https://cars.prokorea.trading/",
+    "origin": "https://www.encar.com",
+    "referer": "https://www.encar.com/",
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"macOS"',
     "sec-fetch-dest": "empty",
