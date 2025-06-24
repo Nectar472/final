@@ -33,7 +33,7 @@ PROXY_CONFIGS = [
     {
         "name": "Oxylabs Korea Residential",
         "proxy": "pr.oxylabs.io:7777",
-        "auth": "customer-admin_27be3-cc-KR:5e=JR+RsR829icd",
+        "auth": "customer-adapt_Yf2Vn-cc-US:2NUmsvXdgsc+tm5",
         "location": "South Korea",
         "provider": "oxylabs",
     },
