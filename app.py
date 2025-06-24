@@ -14,7 +14,7 @@ import re
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
 
-app = FastAPI(title="Encar Proxy API", version="1.0")
+app = FastAPI(title="Encar Proxy on Render", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +46,8 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.78 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.61 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; rv:124.0) Gecko/20100101 Firefox/124.0",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.113 Mobile Safari/537.36",
 ]
 
 class EncarProxyClient:
@@ -54,13 +55,14 @@ class EncarProxyClient:
         self.current_proxy_index = 0
         self.request_count = 0
         self.last_request_time = 0
+        self.session_rotation_count = 0
 
     def _get_dynamic_headers(self) -> Dict[str, str]:
         ua = random.choice(USER_AGENTS)
         headers = {
             "accept": "application/json, text/javascript, */*; q=0.01",
             "accept-encoding": "gzip, deflate, br, zstd",
-            "accept-language": "ko-KR,ko;q=0.9",
+            "accept-language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
             "origin": "http://www.encar.com",
             "referer": "http://www.encar.com/",
             "user-agent": ua,
@@ -78,6 +80,8 @@ class EncarProxyClient:
         if now - self.last_request_time < 0.5:
             time.sleep(0.5 - (now - self.last_request_time))
         self.last_request_time = time.time()
+        if self.request_count % 15 == 0:
+            self._rotate_proxy()
         self.request_count += 1
 
     async def make_request(self, url: str, max_retries: int = 5) -> Dict:
@@ -87,7 +91,6 @@ class EncarProxyClient:
                 headers = self._get_dynamic_headers()
                 proxy_info = self._rotate_proxy()
                 proxy_url = f"http://{proxy_info['auth']}@{proxy_info['proxy']}"
-
                 transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
 
                 async with httpx.AsyncClient(transport=transport, timeout=30) as client:
@@ -95,7 +98,7 @@ class EncarProxyClient:
 
                 if response.status_code == 200:
                     return {"success": True, "status_code": 200, "text": response.text}
-                elif response.status_code in [403, 429, 503]:
+                elif response.status_code in [403, 407, 429, 503]:
                     await asyncio.sleep(2 ** attempt)
                     continue
                 else:
@@ -112,22 +115,27 @@ async def proxy_catalog(q: str = Query(...), inav: str = Query(...)):
     encoded_q = quote(q, safe="()_.")
     encoded_inav = quote(inav, safe="|")
     url = f"https://api.encar.com/search/car/list/general?count=true&q={encoded_q}&inav={encoded_inav}"
-    logger.info(f"Final request URL: {url}")
-
     result = await proxy_client.make_request(url)
 
     if result.get("success"):
         try:
-            data = json.loads(result["text"])
-            return JSONResponse(content=data)
+            parsed = json.loads(result["text"])
+            return JSONResponse(content=parsed)
         except json.JSONDecodeError:
-            return JSONResponse(status_code=502, content={"error": "Invalid JSON returned"})
+            logger.error(f"Invalid JSON received: {result['text'][:300]}")
+            return JSONResponse(status_code=502, content={"error": "Invalid JSON"})
 
+    logger.warning(f"Request failed. Status: {result.get('status_code')}, Text: {result.get('text', '')[:300]}")
     return JSONResponse(status_code=502, content=result)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "proxy_index": proxy_client.current_proxy_index, "request_count": proxy_client.request_count}
+    return {
+        "status": "ok",
+        "proxy_index": proxy_client.current_proxy_index,
+        "request_count": proxy_client.request_count,
+        "session_rotations": proxy_client.session_rotation_count,
+    }
 
 if __name__ == "__main__":
     import uvicorn
