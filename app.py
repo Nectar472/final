@@ -156,12 +156,17 @@ proxy_client = EncarProxyClient()
 async def proxy_general(q: str = Query(...), inav: str = Query(...)):
     url = f"https://api.encar.com/search/car/list/general?count=true&q={q}&inav={inav}"
     result = await proxy_client.make_request(url)
+    
     if result.get("success"):
         try:
             parsed = json.loads(result["text"])
             return JSONResponse(content=parsed)
         except json.JSONDecodeError:
+            logger.error(f"Invalid JSON received: {result['text'][:300]}")
             return JSONResponse(status_code=502, content={"error": "Invalid JSON"})
+
+    # 🔻 ЛОГ ПЕРЕД ОТВЕТОМ
+    logger.warning(f"Request failed. Status: {result.get('status_code')}, Text: {result.get('text', '')[:300]}")
     return JSONResponse(status_code=502, content=result)
 
 
