@@ -153,8 +153,8 @@ class EncarProxyClient:
 proxy_client = EncarProxyClient()
 
 @app.get("/api/catalog")
-async def proxy_catalog(q: str = Query(...), sr: str = Query(...)):
-    url = f"https://api.encar.com/search/car/list?count=true&q={q}&sr={sr}"
+async def proxy_general(q: str = Query(...), inav: str = Query(...)):
+    url = f"https://api.encar.com/search/car/list/general?count=true&q={q}&inav={inav}"
     result = await proxy_client.make_request(url)
     if result.get("success"):
         try:
@@ -163,6 +163,7 @@ async def proxy_catalog(q: str = Query(...), sr: str = Query(...)):
         except json.JSONDecodeError:
             return JSONResponse(status_code=502, content={"error": "Invalid JSON"})
     return JSONResponse(status_code=502, content=result)
+
 
 @app.get("/health")
 async def health():
