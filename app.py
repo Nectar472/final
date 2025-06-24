@@ -110,7 +110,7 @@ class EncarProxyClient:
             self._create_new_session()
         self.request_count += 1
 
-    async def make_request(self, url: str, max_retries: int = 3) -> Dict:
+    async def make_request(self, url: str, max_retries: int = 5) -> Dict:
         for attempt in range(max_retries):
             try:
                 self._rate_limit()
@@ -121,17 +121,17 @@ class EncarProxyClient:
                     return {"success": True, "status_code": 200, "text": response.text}
                 elif response.status_code == 403:
                     self._create_new_session()
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(5)
                 elif response.status_code == 407:
                     self._rotate_proxy()
                 elif response.status_code in [429, 503]:
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(5 ** attempt)
                     self._rotate_proxy()
                 else:
                     return {"success": False, "status_code": response.status_code, "text": response.text}
             except Exception as e:
                 logger.error(f"Request failed: {e}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(3)
         return {"success": False, "error": "Max retries exceeded"}
 
 proxy_client = EncarProxyClient()
