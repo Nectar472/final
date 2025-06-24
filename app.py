@@ -154,7 +154,7 @@ proxy_client = EncarProxyClient()
 
 @app.get("/api/catalog")
 async def proxy_general(q: str = Query(...), inav: str = Query(...)):
-    url = f"https://api.encar.com/search/car/list/general?count=true&q={q}&inav={inav}"
+    url = f"https://api.encar.com/search/car/list/?count=true&q={q}&inav={inav}"
     result = await proxy_client.make_request(url)
     if result.get("success"):
         try:
